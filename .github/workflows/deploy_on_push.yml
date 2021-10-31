@@ -1,0 +1,63 @@
+name: Deploy on push
+ 
+on:
+  push:
+    branches: [ develop ]
+
+
+jobs:
+  deploy:
+
+    runs-on: ubuntu-latest
+    environment: default
+
+    steps:
+      - uses: actions/checkout@v2
+
+      #Build static site
+      #Using Node.js 14
+      #Otherwise packets don't install and site don't build properly 
+      #Setting Contentful CMS credentials 
+      #This provides integration between Gatsby and Contentful
+      #Setting Mailchimp endpoint to provide an ability to subscribe
+      #for site updates by email
+      - name: Setup Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: '14.x'
+      - name: Install Node.js Dependencies
+        run: |
+          npm install
+      - name: Build Site
+        run: |
+          npm run build --if-exists
+        env: 
+          CONTENTFUL_SPACE_ID: ${{ secrets.CONTENTFUL_SPACE_ID }}
+          CONTENTFUL_ACCESS_TOKEN: ${{ secrets.CONTENTFUL_ACCESS_TOKEN }}
+          MAILCHIMP_ENDPOINT: ${{ secrets.MAILCHIMP_ENDPOINT }}
+       
+      #Install AWS CDK and init it in a new directory
+      #Install packages necessary for CDK stack
+      #Move .js script into CDK subdirectory so it can be executed
+      #Deploy it
+      - name: Install AWS CDK
+        run: |
+          npm install -g aws-cdk
+      - name: Init AWS CDK and install additional dependencies
+        run: |
+          mkdir cdk && cd cdk
+          cdk init app --language=javascript
+          npm install @aws-cdk/aws-s3 \
+                      @aws-cdk/aws-cloudfront \
+                      @aws-cdk/aws-s3-deployment
+      - name: Move .js script
+        run: |
+          mv cdk-stack/cdk-stack.js cdk/lib
+      - name: Deploy
+        run: |
+          cd cdk
+          cdk deploy --require-approval never
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: 'eu-north-1'
