@@ -54,7 +54,7 @@ jobs:
                       @aws-cdk/aws-s3-deployment
       - name: Move .js script
         run: |
-          mv .cd/cdk-stack.js cdk/lib
+          mv cdk-stack/cdk-stack.js cdk/lib
       - name: Deploy
         run: |
           cd cdk
